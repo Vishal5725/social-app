@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import {
     Box,
+    CircularProgress,
     IconButton,
     TextField,
     Typography,
@@ -16,26 +17,44 @@ const CommentSection = ({
     postId,
 }) => {
     const [commentText, setCommentText] = useState("");
+    const [commentLoading, setCommentLoading] = useState(false);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        if (!commentText.trim()) {
+        // Prevent duplicate requests
+        if (
+            commentLoading ||
+            !commentText.trim()
+        ) {
             return;
         }
 
-        const success = await onComment(
-            postId,
-            commentText
-        );
+        try {
+            setCommentLoading(true);
 
-        if (success) {
-            setCommentText("");
+            const success = await onComment(
+                postId,
+                commentText.trim()
+            );
+
+            if (success) {
+                setCommentText("");
+            }
+        } catch (error) {
+            console.error(
+                "Comment submission error:",
+                error
+            );
+        } finally {
+            setCommentLoading(false);
         }
     };
 
     return (
         <>
+            {/* Existing comments */}
+
             {comments?.length > 0 && (
                 <Box sx={{ mb: 2 }}>
                     {comments.map((comment, index) => (
@@ -63,6 +82,8 @@ const CommentSection = ({
                 </Box>
             )}
 
+            {/* Comment input */}
+
             {isLoggedIn && (
                 <Box
                     component="form"
@@ -70,23 +91,41 @@ const CommentSection = ({
                     sx={{
                         display: "flex",
                         gap: 1,
+                        alignItems: "center",
                     }}
                 >
                     <TextField
                         fullWidth
                         size="small"
-                        placeholder="Write a comment..."
+                        placeholder={
+                            commentLoading
+                                ? "Posting comment..."
+                                : "Write a comment..."
+                        }
                         value={commentText}
                         onChange={(event) =>
-                            setCommentText(event.target.value)
+                            setCommentText(
+                                event.target.value
+                            )
                         }
+                        disabled={commentLoading}
                     />
 
                     <IconButton
                         type="submit"
-                        disabled={!commentText.trim()}
+                        disabled={
+                            commentLoading ||
+                            !commentText.trim()
+                        }
+                        aria-label="Send comment"
                     >
-                        <Send />
+                        {commentLoading ? (
+                            <CircularProgress
+                                size={22}
+                            />
+                        ) : (
+                            <Send />
+                        )}
                     </IconButton>
                 </Box>
             )}
