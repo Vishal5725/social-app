@@ -123,9 +123,37 @@ const login = async (req, res) => {
     });
   }
 };
+// =========================
+// GET CURRENT USER
+// =========================
+const getMe = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId)
+            .select("-password");
 
+        if (!user) {
+            return res.status(401).json({
+                message: "User no longer exists",
+            });
+        }
 
+        return res.status(200).json({
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+            },
+        });
+    } catch (error) {
+        console.error("Get current user error:", error);
+
+        return res.status(500).json({
+            message: "Server error",
+        });
+    }
+};
 module.exports = {
   signup,
   login,
+  getMe,
 };

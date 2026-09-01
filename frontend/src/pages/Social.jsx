@@ -31,13 +31,23 @@ const Social = () => {
     const [image, setImage] = useState(null);
     const [creatingPost, setCreatingPost] = useState(false);
 
-    const user = JSON.parse(
-        localStorage.getItem("user") || "null"
+    const [user, setUser] = useState(() => {
+        try {
+            return JSON.parse(
+                localStorage.getItem("user") || "null"
+            );
+        } catch {
+            return null;
+        }
+    });
+
+    const [isLoggedIn, setIsLoggedIn] = useState(
+        Boolean(localStorage.getItem("token"))
     );
 
-    const token = localStorage.getItem("token");
-    const isLoggedIn = Boolean(token);
-
+    const [authChecking, setAuthChecking] = useState(
+        Boolean(localStorage.getItem("token"))
+    );
     // =========================
     // FETCH POSTS
     // =========================
@@ -100,7 +110,44 @@ const Social = () => {
 
         fetchPosts(page + 1, true);
     };
+    useEffect(() => {
+        const verifyUser = async () => {
+            const token = localStorage.getItem("token");
 
+            // Guest user
+            if (!token) {
+                setAuthChecking(false);
+                return;
+            }
+
+            try {
+                const response = await API.get("/auth/me");
+
+                setUser(response.data.user);
+                setIsLoggedIn(true);
+
+                localStorage.setItem(
+                    "user",
+                    JSON.stringify(response.data.user)
+                );
+            } catch (error) {
+                console.error(
+                    "Authentication verification failed:",
+                    error
+                );
+
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+
+                setUser(null);
+                setIsLoggedIn(false);
+            } finally {
+                setAuthChecking(false);
+            }
+        };
+
+        verifyUser();
+    }, []);
     useEffect(() => {
         fetchPosts(1);
     }, []);
@@ -279,7 +326,7 @@ const Social = () => {
     // LOADING
     // =========================
 
-    if (loading) {
+    if (loading || authChecking) {
         return (
             <Box
                 sx={{
